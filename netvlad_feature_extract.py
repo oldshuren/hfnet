@@ -3,7 +3,7 @@ import h5py
 import numpy as np
 from pathlib import Path
 
-from hfnet.models import get_model  
+from hfnet.models import get_model
 from hfnet.settings import EXPER_PATH
 
 import tensorflow as tf
@@ -27,7 +27,7 @@ parser.add_argument(
 
 args=parser.parse_args()
 
-checkpoint_path = Path(EXPER_PATH, 'saved_models/vd16_pitts30k_conv5_3_vlad_preL2_intra_white/vd16_pitts30k_conv5_3_vlad_preL2_intra_white')
+checkpoint_path = Path(EXPER_PATH, 'vd16_pitts30k_conv5_3_vlad_preL2_intra_white/vd16_pitts30k_conv5_3_vlad_preL2_intra_white')
 config = {'checkpoint_path':checkpoint_path, 'data': {'name': 'aachen', 'load_db': False, 'load_queries': True, 'resize_max': 960}, 'model': {'name': 'netvlad_original', 'local_descriptor_layer': 'conv3_3', 'image_channels': 1}, 'weights': 'vd16_pitts30k_conv5_3_vlad_preL2_intra_white/vd16_pitts30k_conv5_3_vlad_preL2_intra_white'}
 
 globs=['*.jpg', '*.png', '*.jpeg', '*.JPG', '*.PNG']
@@ -35,7 +35,7 @@ image_paths = []
 for g in globs:
     image_paths += list(Path(args.image_dir).glob('**/'+g))
 if len(image_paths) == 0:
-    raise ValueError(f'Could not find any image in root: {root}.')
+    raise ValueError(f'Could not find any image in root: {args.image_dir}.')
 image_paths = sorted(list(set(image_paths)))
 image_paths = [i.relative_to(args.image_dir) for i in image_paths]
 #print('image_paths:{}]'.format(image_paths))
@@ -50,7 +50,7 @@ with get_model(config['model']['name'])(
       if checkpoint_path is not None:
             net.load(str(checkpoint_path))
 
-      keys = ['global_descriptor']    
+      keys = ['global_descriptor']
       cnt = 0
       for im_file in image_paths:
             image = cv2.imread(str(args.image_dir / im_file))
@@ -64,6 +64,3 @@ with get_model(config['model']['name'])(
 
 global_feature_file.close()
 print('Finished exporting features.')
-    
-
-

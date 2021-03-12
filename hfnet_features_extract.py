@@ -9,24 +9,6 @@ import tensorflow as tf
 from tensorflow.python.saved_model import tag_constants
 tf.contrib.resampler  # import C++ op
 
-def makedirs(folder, *args, **kwargs):
-      try:
-          return os.makedirs(folder, exist_ok=True, *args, **kwargs)
-      except TypeError:
-          # Unexpected arguments encountered
-          pass
-
-      try:
-          # Should work is TypeError was caused by exist_ok, eg., Py2
-          return os.makedirs(folder, *args, **kwargs)
-      except OSError as e:
-          if e.errno != errno.EEXIST:
-              raise
-
-          if os.path.isfile(folder):
-              # folder is a file, raise OSError just like os.makedirs() in Py3
-              raise
-
 from argparse import ArgumentParser
 
 parser = ArgumentParser(description='Features Extract')
