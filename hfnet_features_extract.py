@@ -24,8 +24,22 @@ parser.add_argument(
     help='Output folder for featues'
 )
 
-args=parser.parse_args()
+parser.add_argument(
+    '-gen-local', '--gen-local',
+      action='store_true',
+      help='Generate local feature'
+)
 
+parser.add_argument(
+    '-nms_radius', '--nms_radius',
+      type=int, default=4
+)
+parser.add_argument(
+    '-keypoints', '--keypoints',
+      type=int, default=4096
+)
+
+args=parser.parse_args()
 
 class HFNet:
     def __init__(self, model_path, outputs):
@@ -42,7 +56,7 @@ class HFNet:
         self.outputs = {n: graph.get_tensor_by_name(n+':0')[0] for n in outputs}
         self.nms_radius_op = graph.get_tensor_by_name('pred/simple_nms/radius:0')
         self.num_keypoints_op = graph.get_tensor_by_name('pred/top_k_keypoints/k:0')
-        
+
     def inference(self, image, nms_radius=4, num_keypoints=1000):
         inputs = {
             self.image_ph: image[..., ::-1].astype(np.float),
@@ -66,29 +80,31 @@ image_paths = [i.relative_to(args.image_dir) for i in image_paths]
 #print('image_paths:{}]'.format(image_paths))
 
 global_feature_path=Path(args.output, 'global_features.h5')
-local_feature_path=Path(args.output, 'local_features.h5')
-local_feature_path.parent.mkdir(exist_ok=True, parents=True)
+global_feature_path.parent.mkdir(exist_ok=True, parents=True)
 global_feature_file = h5py.File(str(global_feature_path), 'w')
-local_feature_file = h5py.File(str(local_feature_path), 'w')
+if args.gen_local:
+      local_feature_path=Path(args.output, 'feats-superpoint.h5')
+      local_feature_file = h5py.File(str(local_feature_path), 'w')
 
 mode = cv2.IMREAD_COLOR
 cnt = 0
 for im_file in image_paths:
     image = cv2.imread(str(args.image_dir / im_file), mode)
-    db = hfnet.inference(image)
+    db = hfnet.inference(image, nms_radius=args.nms_radius, num_keypoints=args.keypoints)
     grp = global_feature_file.create_group(str(im_file))
     grp.create_dataset('global_descriptor', data=db['global_descriptor'])
-    grp = local_feature_file.create_group(str(im_file))
-    grp.create_dataset('keypoints', data=db['keypoints'])
-    grp.create_dataset('descriptors', data=db['local_descriptors'])
-    grp.create_dataset('scores', data=db['scores'])
+    if args.gen_local:
+        grp = local_feature_file.create_group(str(im_file))
+        grp.create_dataset('keypoints', data=db['keypoints'].astype(np.float32))
+        grp.create_dataset('descriptors', data=db['local_descriptors'].T)
+        grp.create_dataset('scores', data=db['scores'])
+        size = image.shape[:2][::-1]
+        grp.create_dataset('image_size', data=np.array(size))
     cnt += 1
     if cnt % 200 == 0 :
         print('{} images processed'.format(cnt))
 
 global_feature_file.close()
-local_feature_file.close()
+if args.gen_local:
+    local_feature_file.close()
 print('Finished exporting features.')
-    
-
-
