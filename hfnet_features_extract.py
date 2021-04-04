@@ -11,7 +11,9 @@ tf.contrib.resampler  # import C++ op
 
 class HFNet:
     def __init__(self, model_path, outputs):
-        self.session = tf.Session()
+        sess_config = tf.ConfigProto()
+        sess_config.gpu_options.allow_growth = True
+        self.session = tf.Session(config=sess_config)
         self.image_ph = tf.placeholder(tf.float32, shape=(None, None, 3))
 
         net_input = tf.image.rgb_to_grayscale(self.image_ph[None])
